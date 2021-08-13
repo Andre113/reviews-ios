@@ -13,8 +13,5 @@ CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)" RUBY_CONFIGURE_OPTS
 gem install bundler
 bundle install
 
-# Generate project
-make generate
-
 # Post setup info
 echo "Run make run"

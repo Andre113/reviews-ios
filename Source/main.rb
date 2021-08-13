@@ -10,7 +10,7 @@ class Main
 		Dotenv.load('./.env')
 		@reviews_needed_for_each_pr = 5
 		@weeks_searched = 3
-		@number_of_cores = 32
+		@number_of_cores = 8
 
 		token = ENV['GITHUB_KEY']
 		@reviews_service = ReviewsService.new(token)
@@ -34,12 +34,13 @@ class Main
 		@user_reviews_list = @user_reviews_list.sort_by(&:qtd)
 
 		# To expose all users
-		# show_user_review_list
+		show_user_review_list
 
 		result
 	end
 
 	def fetch_reviews_for_all_members
+		puts("Fetching users...")
 		members = @members_service.members
 
 		users_to_ignore = ["mobilepicpay"]
@@ -60,7 +61,36 @@ class Main
 		puts("Found #{@user_reviews_list.length} users!")
 	end
 
+	def fetch_pull_requests
+		puts("Fetching pull requests...")
+		total_days = @weeks_searched * 7
+
+		i = 0
+		loop do
+			temp_pulls = @pulls_service.pull_requests(i)
+			i += 1
+
+			index = temp_pulls.each_index.detect { |i| 
+				created_at = temp_pulls[i].created_at
+				(Date.today - created_at) > total_days
+			}
+
+			if !index.nil?
+				temp_pulls = temp_pulls[0...index]
+			end
+
+			temp_pulls = temp_pulls.select { |item| item.valid }
+
+			@pull_requests.concat(temp_pulls)
+
+			break if !index.nil?
+		end
+
+		puts("Found #{@pull_requests.length} pull requests!")
+	end
+
 	def fetch_all_reviews
+		puts("Fetching reviews...")
 		queue = @pull_requests.clone
 		threads = (0..@number_of_cores).map do
 			Thread.new do
@@ -91,33 +121,6 @@ class Main
 		end
 
 		@pull_requests_reviews_list.append(PullRequestsReviews.new(pr, reviews.length))
-	end
-
-	def fetch_pull_requests
-		total_days = @weeks_searched * 7
-
-		i = 0
-		loop do
-			temp_pulls = @pulls_service.pull_requests(i)
-			i += 1
-
-			index = temp_pulls.each_index.detect { |i| 
-				created_at = temp_pulls[i].created_at
-				(Date.today - created_at) > total_days
-			}
-
-			if !index.nil?
-				temp_pulls = temp_pulls[0...index]
-			end
-
-			temp_pulls = temp_pulls.select { |item| item.valid }
-
-			@pull_requests.concat(temp_pulls)
-
-			break if !index.nil?
-		end
-
-		puts("Found #{@pull_requests.length} pull requests!")
 	end
 
 	def show_user_review_list
