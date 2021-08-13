@@ -10,7 +10,7 @@ class Main
 		Dotenv.load('./.env')
 		@reviews_needed_for_each_pr = 5
 		@weeks_searched = 3
-		@number_of_cores = 8
+		@number_of_cores = 1
 
 		token = ENV['GITHUB_KEY']
 		@reviews_service = ReviewsService.new(token)
