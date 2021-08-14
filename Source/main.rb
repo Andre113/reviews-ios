@@ -139,7 +139,7 @@ class Main
 	end
 
 	def save_list
-		filename = "output.txt"
+		filename = "ios_reviews_list.txt"
 
 		File.open("#{filename}", "w") { |f|
 			f.write("#{Date.today}\n\n")
