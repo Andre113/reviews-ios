@@ -3,3 +3,9 @@
 
 # DS Store
 .DS_Store
+
+# Local bitrise file
+bitrise.yml
+
+# Local output file
+output.txt
