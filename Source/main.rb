@@ -138,14 +138,17 @@ class Main
 	end
 
 	def save_list
-		IO.popen('envman add --key OUTPUT_REVIEWS_IOS', 'r+') {|f|
+		filename = "output.txt"
+
+		File.open("#{filename}", "w") { |f|
 			f.write("#{Date.today}\n\n")
 			for user_reviews in @user_reviews_list
 				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
 			end
 			f.close_write
-			f.read
 		}
+
+		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}'" )
 	end
 
 	def result
