@@ -9,7 +9,7 @@ class Main
 	def initialize
 		Dotenv.load('./.env')
 		@reviews_needed_for_each_pr = 5
-		@weeks_searched = 3
+		@weeks_searched = 1
 		@number_of_cores = Integer(ENV['NUMBER_OF_THREADS'])
 
 		token = ENV['GITHUB_KEY']
@@ -38,6 +38,7 @@ class Main
 
 		if is_bitrise == 'true'
 			save_list
+			save_top_10_list
 		end
 
 		result
@@ -148,7 +149,18 @@ class Main
 			f.close_write
 		}
 
-		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}'" )
+		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}' --expand false" )
+	end
+
+	def save_top_10_list
+		IO.popen('envman add --key OUTPUT_TOP_10', 'r+') {|f|
+			f.write("#{Date.today}\n\n")
+			for i in 0..9 do
+				user_reviews = @user_reviews_list[i]
+			    f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
+			end
+			f.close_write
+		}
 	end
 
 	def result
