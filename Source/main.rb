@@ -149,7 +149,7 @@ class Main
 			f.close_write
 		}
 
-		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}' --expand false" )
+		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}'" )
 	end
 
 	def save_top_10_list
