@@ -9,7 +9,7 @@ class Main
 	def initialize
 		Dotenv.load('./.env')
 		@reviews_needed_for_each_pr = 5
-		@weeks_searched = 1
+		@weeks_searched = Integer(ENV['WEEKS_TO_SEARCH'])
 		@number_of_cores = Integer(ENV['NUMBER_OF_THREADS'])
 
 		token = ENV['GITHUB_KEY']
