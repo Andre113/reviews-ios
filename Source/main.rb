@@ -66,13 +66,6 @@ class Main
 
 		puts("Found #{@user_reviews_list.length} users!")
 		puts("")
-
-		filename = "output.txt"
-		File.open(filename, "w") do |f|     
-			for user_reviews in @user_reviews_list
-				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
-			end
-		end
 	end
 
 	def fetch_pull_requests
