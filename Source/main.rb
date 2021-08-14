@@ -11,7 +11,6 @@ class Main
 		@reviews_needed_for_each_pr = 5
 		@weeks_searched = 3
 		@number_of_cores = Integer(ENV['NUMBER_OF_THREADS'])
-		puts(@number_of_cores)
 
 		token = ENV['GITHUB_KEY']
 		@reviews_service = ReviewsService.new(token)
@@ -22,10 +21,10 @@ class Main
 		@pull_requests = []
 		@pull_requests_reviews_list = []
 
-		run(ARGV[0])
+		run(ENV['IS_BITRISE'])
 	end
 
-	def run(is_ci)
+	def run(is_bitrise)
 		fetch_reviews_for_all_members
 
 		fetch_pull_requests
@@ -37,9 +36,8 @@ class Main
 		# To expose all users
 		show_user_review_list
 
-		if is_ci == 'true'
+		if is_bitrise == 'true'
 			save_list
-			puts(is_ci)
 		end
 
 		result

@@ -6,4 +6,4 @@ setup: ## Install project required tools
 	@./Scripts/setup.sh
 
 run:
-	@ruby Source/main.rb $(is_ci)
+	@ruby Source/main.rb
