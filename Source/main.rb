@@ -22,6 +22,8 @@ class Main
 		@pull_requests_reviews_list = []
 		@days_until_approve_list = []
 
+		@output_name = "ios_reviews_list.txt"
+
 		run(ENV['IS_BITRISE'])
 	end
 
@@ -37,12 +39,12 @@ class Main
 		# To expose all users
 		show_user_review_list
 
+		save_list
+
 		if is_bitrise == 'true'
-			save_list
+			export_list_to_envman
 			save_top_10_list
 		end
-
-		result
 	end
 
 	def fetch_reviews_for_all_members
@@ -114,6 +116,7 @@ class Main
 				while pr
 					fetch_reviews(pr)
 					pr = queue.pop
+					sleep(0.3)
 				end
 			end
 		end
@@ -173,17 +176,48 @@ class Main
 	end
 
 	def save_list
-		filename = "ios_reviews_list.txt"
-
-		File.open("#{filename}", "w") { |f|
+		File.open("#{@output_name}", "w") { |f|
 			f.write("#{Date.today}\n\n")
 			for user_reviews in @user_reviews_list
 				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
 			end
+			f.write("\n")
+
+			days_until_approve_medium = @days_until_approve_list.sum.to_f / @days_until_approve_list.count.to_f
+			f.write("Média de dias para aprovar PRs pequenos: #{days_until_approve_medium}\n")
+
+			done_reviews = @user_reviews_list.map(&:qtd).compact.sum
+			needed_reviews = @pull_requests.length.to_f * @reviews_needed_for_each_pr
+
+			f.write("PRS totais: #{@pull_requests.length}\n")
+			f.write("Fizemos #{done_reviews} reviews\n")
+			f.write("Precisamos de #{needed_reviews} reviews\n")
+
+			missing_reviews = needed_reviews - done_reviews
+			f.write("Faltaram #{missing_reviews} reviews\n")
+
+			medium_reviews_done_by_user = done_reviews / @user_reviews_list.length
+			f.write("Tivemos uma média de #{medium_reviews_done_by_user} reviews por usuário\n")
+
+			medium_reviews_needed_by_user = needed_reviews / @user_reviews_list.length
+			f.write("A média para que todos os PRs estivesse fechados seria #{medium_reviews_needed_by_user}\n")
+
+			users_on_average = (@user_reviews_list.select { |item| item.qtd >= medium_reviews_needed_by_user }).count
+			users_bellow_average = @user_reviews_list.count - users_on_average
+			f.write("Temos #{users_on_average} pessoas dentro da média\n")
+			f.write("E #{users_bellow_average} pessoas abaixo\n")
+
+			medium_reviews_needed_by_user_weekly = medium_reviews_needed_by_user / @weeks_searched
+			medium_reviews_done_by_user_weekly = medium_reviews_done_by_user / @weeks_searched
+			f.write("Semanalmente precisamos de #{medium_reviews_needed_by_user_weekly} reviews por usuário\n")
+			f.write("Estamos fazendo #{medium_reviews_done_by_user_weekly}\n")
+
 			f.close_write
 		}
+	end
 
-		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{filename}'" )
+	def export_list_to_envman
+		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{@output_name}'" )
 	end
 
 	def save_top_10_list
@@ -195,37 +229,6 @@ class Main
 			end
 			f.close_write
 		}
-	end
-
-	def result
-		days_until_approve_medium = @days_until_approve_list.sum.to_f / @days_until_approve_list.count.to_f
-		puts("Média de dias para aprovar PRs pequenos: #{days_until_approve_medium}")
-
-		done_reviews = @user_reviews_list.map(&:qtd).compact.sum
-		needed_reviews = @pull_requests.length.to_f * @reviews_needed_for_each_pr
-
-		puts("PRS totais: #{@pull_requests.length}")
-		puts("Fizemos #{done_reviews} reviews")
-		puts("Precisamos de #{needed_reviews} reviews")
-
-		missing_reviews = needed_reviews - done_reviews
-		puts("Faltaram #{missing_reviews} reviews")
-
-		medium_reviews_done_by_user = done_reviews / @user_reviews_list.length
-		puts("Tivemos uma média de #{medium_reviews_done_by_user} reviews por usuário")
-
-		medium_reviews_needed_by_user = needed_reviews / @user_reviews_list.length
-		puts("A média para que todos os PRs estivesse fechados seria #{medium_reviews_needed_by_user}")
-
-		users_on_average = (@user_reviews_list.select { |item| item.qtd >= medium_reviews_needed_by_user }).count
-		users_bellow_average = @user_reviews_list.count - users_on_average
-		puts("Temos #{users_on_average} pessoas dentro da média")
-		puts("E #{users_bellow_average} pessoas abaixo")
-
-		medium_reviews_needed_by_user_weekly = medium_reviews_needed_by_user / @weeks_searched
-		medium_reviews_done_by_user_weekly = medium_reviews_done_by_user / @weeks_searched
-		puts("Semanalmente precisamos de #{medium_reviews_needed_by_user_weekly} reviews por usuário")
-		puts("Estamos fazendo #{medium_reviews_done_by_user_weekly}")
 	end
 end
 

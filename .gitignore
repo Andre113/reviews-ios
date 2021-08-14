@@ -8,4 +8,4 @@
 bitrise.yml
 
 # Local output file
-output.txt
+ios_reviews_list.txt
