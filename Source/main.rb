@@ -10,7 +10,8 @@ class Main
 		Dotenv.load('./.env')
 		@reviews_needed_for_each_pr = 5
 		@weeks_searched = 3
-		@number_of_cores = 1
+		@number_of_cores = Integer(ENV['NUMBER_OF_THREADS'])
+		puts(@number_of_cores)
 
 		token = ENV['GITHUB_KEY']
 		@reviews_service = ReviewsService.new(token)
@@ -21,20 +22,25 @@ class Main
 		@pull_requests = []
 		@pull_requests_reviews_list = []
 
-		run
+		run(ARGV[0])
 	end
 
-	def run
+	def run(is_ci)
 		fetch_reviews_for_all_members
 
 		fetch_pull_requests
 
 		fetch_all_reviews
 
-		@user_reviews_list = @user_reviews_list.sort_by(&:qtd)
+		@user_reviews_list = @user_reviews_list.sort_by(&:qtd).reverse
 
 		# To expose all users
 		show_user_review_list
+
+		if is_ci == 'true'
+			save_list
+			puts(is_ci)
+		end
 
 		result
 	end
@@ -59,6 +65,14 @@ class Main
 		threads.each { |t| t.join }
 
 		puts("Found #{@user_reviews_list.length} users!")
+		puts("")
+
+		filename = "output.txt"
+		File.open(filename, "w") do |f|     
+			for user_reviews in @user_reviews_list
+				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
+			end
+		end
 	end
 
 	def fetch_pull_requests
@@ -87,6 +101,7 @@ class Main
 		end
 
 		puts("Found #{@pull_requests.length} pull requests!")
+		puts("")
 	end
 
 	def fetch_all_reviews
@@ -103,6 +118,7 @@ class Main
 		end
 
 		threads.each { |t| t.join }
+		puts("")
 	end
 
 	def fetch_reviews(pr)
@@ -125,8 +141,20 @@ class Main
 
 	def show_user_review_list
 		for user_reviews in @user_reviews_list
-			puts("#{user_reviews.user.login} - QTD: #{user_reviews.qtd}")
+			puts("#{user_reviews.user.login} - #{user_reviews.qtd}")
 		end
+		puts("")
+	end
+
+	def save_list
+		IO.popen('envman add --key OUTPUT_REVIEWS_IOS', 'r+') {|f|
+			f.write("#{Date.today}\n\n")
+			for user_reviews in @user_reviews_list
+				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
+			end
+			f.close_write
+			f.read
+		}
 	end
 
 	def result

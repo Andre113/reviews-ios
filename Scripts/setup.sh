@@ -13,5 +13,9 @@ CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)" RUBY_CONFIGURE_OPTS
 gem install bundler
 bundle install
 
+# Install Envman
+curl -fL https://github.com/bitrise-io/envman/releases/download/2.3.2/envman-$(uname -s)-$(uname -m) > /usr/local/bin/envman
+chmod +x /usr/local/bin/envman
+
 # Post setup info
 echo "Run make run"
