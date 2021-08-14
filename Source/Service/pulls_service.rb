@@ -2,6 +2,7 @@ require 'dotenv'
 require 'rest-client'
 require 'JSON'
 require_relative '../Model/pull_request.rb'
+require_relative '../Model/pull_request_details.rb'
 
 class PullRequestsService
 	attr_reader :token, :base_url
@@ -13,7 +14,7 @@ class PullRequestsService
 		@base_url = "https://api.github.com/repos/#{team}/#{repo}/pulls"
 	end
 
-	def headers(page)
+	def list_headers(page)
 		{
 			'Accept': 'application/vnd.github.v3+json',
 			'Content-type': 'application/json',
@@ -22,15 +23,32 @@ class PullRequestsService
 				page: page,
 				state: "all",
 				sort: "created",
-				direction: "desc"
+				direction: "desc",
+				per_page: 100
 			}
 		}
 	end
 
+	def details_header
+		{
+			'Accept': 'application/vnd.github.v3+json',
+			'Content-type': 'application/json',
+			'Authorization': "token #{@token}",
+		}
+	end
+
 	def pull_requests(page)
-		request = RestClient.get(@base_url, headers(page))
+		request = RestClient.get(@base_url, list_headers(page))
 
 		data = JSON.parse(request.body)
 		repos = data.map { |item| PullRequest.new(item) }
+	end
+
+	def pull_request(pull_number)
+		url = "#{@base_url}/#{pull_number}"
+		request = RestClient.get(url, details_header)
+
+		data = JSON.parse(request.body)
+		PullRequestDetails.new(data)
 	end
 end

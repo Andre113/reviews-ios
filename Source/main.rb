@@ -20,6 +20,7 @@ class Main
 		@user_reviews_list = []
 		@pull_requests = []
 		@pull_requests_reviews_list = []
+		@days_until_approve_list = []
 
 		run(ENV['IS_BITRISE'])
 	end
@@ -48,12 +49,15 @@ class Main
 		puts("Fetching users...")
 		members = @members_service.members
 
+		# Ignore some users (maybe new users?)
 		users_to_ignore = ["mobilepicpay"]
 		queue = members.clone
+
 		threads = (0..@number_of_cores).map do
 			Thread.new do
 				member = queue.pop
 				while member
+					# Ignore the members in users_to_ignore list
 					if !users_to_ignore.include?(member.login)
 						@user_reviews_list.append(UserReviews.new(member))
 					end
@@ -69,6 +73,7 @@ class Main
 
 	def fetch_pull_requests
 		puts("Fetching pull requests...")
+
 		total_days = @weeks_searched * 7
 
 		i = 0
@@ -76,15 +81,19 @@ class Main
 			temp_pulls = @pulls_service.pull_requests(i)
 			i += 1
 
-			index = temp_pulls.each_index.detect { |i| 
-				created_at = temp_pulls[i].created_at
-				(Date.today - created_at) > total_days
+			# Find if there is an element that was created before the period we want
+			index = temp_pulls.each_index.detect { |a| 
+				created_at = temp_pulls[a].created_at
+				days_interval = Integer(Date.today - created_at)
+				days_interval > total_days
 			}
 
+			# Remove the elements that were created before the period we want
 			if !index.nil?
 				temp_pulls = temp_pulls[0...index]
 			end
 
+			# Remove other invalid PRs
 			temp_pulls = temp_pulls.select { |item| item.valid }
 
 			@pull_requests.concat(temp_pulls)
@@ -114,21 +123,46 @@ class Main
 	end
 
 	def fetch_reviews(pr)
+		puts("Fetching review for PR: #{pr.number}")
 		reviews = @reviews_service.reviews(pr.number)
-		reviews = reviews.uniq { |item| [ item.user.id ] }
-		reviews = reviews.select { |item| item.user.id != pr.user.id }
 
 		# Ignore pull requests with lots of reviews
 		return if reviews.count > 7
 
+		get_time_to_approve_small_prs(pr, reviews)
+
 		for review in reviews
+			# Find the user reviews list for the user that created that review
 			user_reviews = @user_reviews_list.detect { |item| item.user.id == review.user.id }
 			if !user_reviews.nil?
+				# Increment the count for the number of reviews made by that user
 				user_reviews.update
 			end
 		end
 
 		@pull_requests_reviews_list.append(PullRequestsReviews.new(pr, reviews.length))
+	end
+
+	def get_time_to_approve_small_prs(pr, reviews)
+		return if reviews.count < 5
+
+		reviews.sort_by(&:date)
+
+		# Get the last review date
+		date = reviews[4].date
+
+		# Get how many days until we had 5 reviews
+		days_until_approve = Integer(date - pr.created_at)
+
+		# Ignore if there was too much time until approve (draft pr?)
+		return if days_until_approve > 10
+
+		details = @pulls_service.pull_request(pr.number)
+
+		# If it was a small pr, add the time we needed to have 5 reviews to the list
+		# if details.total_size <= 400
+			@days_until_approve_list.append(days_until_approve)
+		# end
 	end
 
 	def show_user_review_list
@@ -164,6 +198,9 @@ class Main
 	end
 
 	def result
+		days_until_approve_medium = @days_until_approve_list.sum.to_f / @days_until_approve_list.count.to_f
+		puts("Média de dias para aprovar PRs pequenos: #{days_until_approve_medium}")
+
 		done_reviews = @user_reviews_list.map(&:qtd).compact.sum
 		needed_reviews = @pull_requests.length.to_f * @reviews_needed_for_each_pr
 
