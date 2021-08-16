@@ -129,6 +129,12 @@ class Main
 		puts("Fetching review for PR: #{pr.number}")
 		reviews = @reviews_service.reviews(pr.number)
 
+		# Keep only one review from each user
+		reviews = reviews.uniq { |r| [r.user.id] }
+
+		# Remove the owner of the PR
+		reviews = reviews.select { |review| review.user.id != pr.user.id }
+
 		# Ignore pull requests with lots of reviews
 		return if reviews.count > 20
 
