@@ -130,7 +130,7 @@ class Main
 		reviews = @reviews_service.reviews(pr.number)
 
 		# Ignore pull requests with lots of reviews
-		return if reviews.count > 7
+		# return if reviews.count > 7
 
 		get_time_to_approve_small_prs(pr, reviews)
 
