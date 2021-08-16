@@ -25,11 +25,13 @@ class ReviewsService
 		url = @base_url + "#{number}/reviews"
 		request = RestClient.get(url, headers)
 		data = JSON.parse(request.body)
-		reviews = data.map { |item| 
-			# Do not add reviews that were not submitted
+
+		temp_reviews = []
+		for item in data
 			if item["submitted_at"]
-				Review.new(item)
+				temp_reviews.append(Review.new(item))
 			end
-		}
+		end
+		return temp_reviews
 	end
 end

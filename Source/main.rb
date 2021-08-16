@@ -130,7 +130,7 @@ class Main
 		reviews = @reviews_service.reviews(pr.number)
 
 		# Ignore pull requests with lots of reviews
-		# return if reviews.count > 7
+		return if reviews.count > 20
 
 		get_time_to_approve_small_prs(pr, reviews)
 
@@ -163,9 +163,9 @@ class Main
 		details = @pulls_service.pull_request(pr.number)
 
 		# If it was a small pr, add the time we needed to have 5 reviews to the list
-		# if details.total_size <= 400
+		if details.total_size <= 400
 			@days_until_approve_list.append(days_until_approve)
-		# end
+		end
 	end
 
 	def show_user_review_list
