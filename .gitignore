@@ -9,3 +9,4 @@ bitrise.yml
 
 # Local output file
 ios_reviews_list.txt
+ios_statistics.txt
