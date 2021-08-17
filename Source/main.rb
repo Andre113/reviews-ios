@@ -22,7 +22,8 @@ class Main
 		@pull_requests_reviews_list = []
 		@days_until_approve_list = []
 
-		@output_name = "ios_reviews_list.txt"
+		@list_output_name = "ios_reviews_list.txt"
+		@statistics_output_name = "ios_statistics.txt"
 
 		run(ENV['IS_BITRISE'])
 	end
@@ -35,14 +36,12 @@ class Main
 		fetch_all_reviews
 
 		@user_reviews_list = @user_reviews_list.sort_by(&:qtd).reverse
-
-		# To expose all users
-		show_user_review_list
-
+		
 		save_list
+		save_statistics
 
 		if is_bitrise == 'true'
-			export_list_to_envman
+			export_files_to_envman
 			save_top_10_list
 		end
 	end
@@ -174,39 +173,38 @@ class Main
 		end
 	end
 
-	def show_user_review_list
-		for user_reviews in @user_reviews_list
-			puts("#{user_reviews.user.login} - #{user_reviews.qtd}")
-		end
-		puts("")
-	end
-
 	def save_list
-		File.open("#{@output_name}", "w") { |f|
-			f.write("#{Date.today}\n\n")
+		File.open("#{@list_output_name}", "w") { |f|
+			f.write("Lista de Reviews por pessoa - #{Date.today}\n\n")
+
 			for user_reviews in @user_reviews_list
 				f.write("#{user_reviews.user.login} - #{user_reviews.qtd}\n")
 			end
-			f.write("\n")
 
+			f.close_write
+		}
+	end
+
+	def save_statistics
+		File.open("#{@statistics_output_name}", "w") { |f|
 			days_until_approve_medium = @days_until_approve_list.sum.to_f / @days_until_approve_list.count.to_f
-			f.write("Média de dias para aprovar PRs pequenos: #{days_until_approve_medium}\n")
+			f.write("Média de dias para aprovar PRs pequenos: #{days_until_approve_medium.round(2)}\n")
 
 			done_reviews = @user_reviews_list.map(&:qtd).compact.sum
 			needed_reviews = @pull_requests.length.to_f * @reviews_needed_for_each_pr
 
 			f.write("PRS totais: #{@pull_requests.length}\n")
-			f.write("Fizemos #{done_reviews} reviews\n")
-			f.write("Precisamos de #{needed_reviews} reviews\n")
+			f.write("Fizemos #{done_reviews.round(2)} reviews\n")
+			f.write("Precisamos de #{needed_reviews.round(2)} reviews\n")
 
 			missing_reviews = needed_reviews - done_reviews
-			f.write("Faltaram #{missing_reviews} reviews\n")
+			f.write("Faltaram #{missing_reviews.round(2)} reviews\n")
 
 			medium_reviews_done_by_user = done_reviews / @user_reviews_list.length
-			f.write("Tivemos uma média de #{medium_reviews_done_by_user} reviews por usuário\n")
+			f.write("Tivemos uma média de #{medium_reviews_done_by_user.round(2)} reviews por usuário\n")
 
 			medium_reviews_needed_by_user = needed_reviews / @user_reviews_list.length
-			f.write("A média para que todos os PRs estivesse fechados seria #{medium_reviews_needed_by_user}\n")
+			f.write("A média para que todos os PRs estivesse fechados seria #{medium_reviews_needed_by_user.round(2)}\n")
 
 			users_on_average = (@user_reviews_list.select { |item| item.qtd >= medium_reviews_needed_by_user }).count
 			users_bellow_average = @user_reviews_list.count - users_on_average
@@ -215,15 +213,16 @@ class Main
 
 			medium_reviews_needed_by_user_weekly = medium_reviews_needed_by_user / @weeks_searched
 			medium_reviews_done_by_user_weekly = medium_reviews_done_by_user / @weeks_searched
-			f.write("Semanalmente precisamos de #{medium_reviews_needed_by_user_weekly} reviews por usuário\n")
-			f.write("Estamos fazendo #{medium_reviews_done_by_user_weekly}\n")
+			f.write("Semanalmente precisamos de #{medium_reviews_needed_by_user_weekly.round(2)} reviews por usuário\n")
+			f.write("Estamos fazendo #{medium_reviews_done_by_user_weekly.round(2)}\n")
 
 			f.close_write
 		}
 	end
 
-	def export_list_to_envman
-		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{@output_name}'" )
+	def export_files_to_envman
+		system( "envman add --key OUTPUT_REVIEWS_IOS --value '#{@list_output_name}'" )
+		system( "envman add --key OUTPUT_STATISTICS --value '#{@statistics_output_name}'" )
 	end
 
 	def save_top_10_list
