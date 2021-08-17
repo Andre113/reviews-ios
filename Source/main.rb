@@ -8,6 +8,7 @@ require 'thread'
 class Main
 	def initialize
 		Dotenv.load('./.env')
+		@delay_between_requests = 0.5
 		@reviews_needed_for_each_pr = 5
 		@weeks_searched = Integer(ENV['WEEKS_TO_SEARCH'])
 		@number_of_cores = Integer(ENV['NUMBER_OF_THREADS'])
@@ -36,7 +37,7 @@ class Main
 		fetch_all_reviews
 
 		@user_reviews_list = @user_reviews_list.sort_by(&:qtd).reverse
-		
+
 		save_list
 		save_statistics
 
@@ -115,7 +116,7 @@ class Main
 				while pr
 					fetch_reviews(pr)
 					pr = queue.pop
-					sleep(0.3)
+					sleep(@delay_between_requests)
 				end
 			end
 		end
